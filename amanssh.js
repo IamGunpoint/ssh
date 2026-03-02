@@ -4,17 +4,11 @@ import WebSocket from "ws"
 import pty from "node-pty"
 import os from "os"
 
-const SERVER =
-  "wss://amanssh.onrender.com/agent" // CHANGE THIS
+const SERVER = "wss://amanssh.onrender.com/agent"
 
 const shell =
   process.env.SHELL ||
   (os.platform() === "win32" ? "powershell.exe" : "bash")
-
-console.log("🔐 amanSSH starting...")
-console.log("📡 Connecting to server...\n")
-
-const ws = new WebSocket(SERVER)
 
 const term = pty.spawn(shell, [], {
   name: "xterm-256color",
@@ -24,20 +18,14 @@ const term = pty.spawn(shell, [], {
   env: process.env
 })
 
-ws.on("open", () => {
-  console.log("✅ Connected to amanSSH server")
-})
+const ws = new WebSocket(SERVER)
 
-ws.on("message", (msg) => {
-  // First message = session info
+ws.on("message", msg => {
   try {
     const data = JSON.parse(msg.toString())
-    if (data.id && data.url) {
-      console.log("\n🚀 Session created")
-      console.log(
-        "🌍 Open this link:\n" +
-        `https://YOURDOMAIN.onrender.com${data.url}\n`
-      )
+    if (data.id) {
+      console.log("\n🔗 Open:")
+      console.log(`https://amanssh.onrender.com${data.url}\n`)
       return
     }
   } catch {}
@@ -45,26 +33,10 @@ ws.on("message", (msg) => {
   term.write(msg)
 })
 
-ws.on("close", () => {
-  console.log("\n❌ Connection closed")
-  process.exit(0)
-})
-
-ws.on("error", (err) => {
-  console.error("WebSocket error:", err.message)
-  process.exit(1)
-})
-
-// Terminal → Server
-term.on("data", (data) => {
+term.on("data", d => {
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(data)
+    ws.send(d)
   }
 })
 
-// Cleanup
-process.on("SIGINT", () => {
-  ws.close()
-  term.kill()
-  process.exit(0)
-})
+ws.on("close", () => process.exit(0))
