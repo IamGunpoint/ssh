@@ -1,28 +1,27 @@
 /**
- * ssh client 🌐
- * Connects your VPS terminal to amanssh.onrender.com
- * REAL interactive shell (PTY)
+ * ssh client 🔌
+ * FULL FIX – typing, resize, logs
  */
 
 import WebSocket from "ws"
 import pty from "node-pty"
-import os from "os"
+import process from "process"
 
 const SERVER = "wss://amanssh.onrender.com/agent"
 
-console.log("🔌 Connecting to server...")
+console.log("🔌 Connecting to amanssh.onrender.com ...")
 
 const ws = new WebSocket(SERVER)
 
 /* ======================
-   CREATE REAL SHELL
+   REAL PTY SHELL
 ====================== */
 const shell = pty.spawn(
   process.env.SHELL || "bash",
   [],
   {
     name: "xterm-256color",
-    cols: 100,
+    cols: 120,
     rows: 30,
     cwd: process.env.HOME,
     env: {
@@ -38,14 +37,14 @@ const shell = pty.spawn(
 ws.on("message", msg => {
   const data = msg.toString()
 
-  // first message contains session URL
+  // first message contains URL
   try {
-    const json = JSON.parse(data)
-    if (json.url) {
-      console.log("✅ Connected successfully")
-      console.log("🌍 Open this in browser:")
-      console.log(`👉 https://amanssh.onrender.com${json.url}`)
-      console.log("⌨️ Terminal is LIVE\n")
+    const j = JSON.parse(data)
+    if (j.url) {
+      console.log("✅ CONNECTED")
+      console.log("🌍 Open terminal in browser:")
+      console.log(`👉 https://amanssh.onrender.com${j.url}`)
+      console.log("⌨️ You can type now\n")
       return
     }
   } catch {}
@@ -63,7 +62,7 @@ shell.onData(data => {
 })
 
 /* ======================
-   STATUS HANDLING
+   CONNECTION LOGS
 ====================== */
 ws.on("open", () => {
   console.log("🚀 WebSocket connected")
@@ -71,15 +70,15 @@ ws.on("open", () => {
 
 ws.on("close", () => {
   console.log("❌ Disconnected from server")
-  process.exit(1)
+  process.exit(0)
 })
 
 ws.on("error", err => {
-  console.error("🔥 Connection error:", err.message)
+  console.error("🔥 WebSocket error:", err.message)
 })
 
 /* ======================
-   RESIZE SUPPORT (BONUS)
+   RESIZE FIX (IMPORTANT)
 ====================== */
 process.stdout.on("resize", () => {
   shell.resize(process.stdout.columns, process.stdout.rows)
